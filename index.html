@@ -492,6 +492,8 @@
 
   footer a { color: var(--accent); text-decoration: none; }
   footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  footer a.btn { color: inherit; }
+  footer a.btn:hover { text-decoration: none; border-color: var(--ink); }
 
   .footer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -625,8 +627,12 @@
   <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;width:100%;padding:0;">
     <span>Data from <a href="https://github.com/monosans/proxy-list" target="_blank" rel="noopener">monosans/proxy-list</a> · updates continuously</span>
     <div class="footer-actions">
+      <a class="btn primary" href="https://github.com/Black0Wolf/proxy-viewer/releases/latest" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10"/></svg>
+        Download tester
+      </a>
       <button class="btn" id="copyAllBtn">Copy filtered</button>
-      <button class="btn primary" id="csvBtn">Download CSV</button>
+      <button class="btn" id="csvBtn">Download CSV</button>
     </div>
   </div>
 </footer>

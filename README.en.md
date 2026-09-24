@@ -33,6 +33,31 @@ Then open `http://localhost:8080`.
 
 Your site will be live at `https://<username>.github.io/<repo>/` within a minute.
 
+## Proxy tester (Python GUI)
+
+[`proxy_tester.py`](proxy_tester.py) is a desktop app (CustomTkinter) styled like this site:
+
+- **Filter before testing** — text search, protocol chips, and a country multi-select
+- **Checks (toggleable, at least one required)** — ping via `https://www.google.com/generate_204`, exit IP + country via `https://api.ip.sb/geoip`
+- **Optional chain** — route every test `tester → local socks5 → candidate → site` (default `127.0.0.1:10808`, editable); the app verifies the local hop is up before starting
+- **Live results table** — sortable columns, progress bar, cancel button
+- **Export** — any combination of `csv`, `txt`, `html`, `json` (at least one required)
+
+Run from source:
+
+```bash
+pip install -r requirements.txt
+python proxy_tester.py          # GUI
+python proxy_tester.py --cli    # terminal mode (writes results.csv)
+```
+
+Or grab a ready-made build (Windows, Linux, macOS) from the [latest release](https://github.com/Black0Wolf/proxy-viewer/releases/latest). Releases are automatic: push any `v*` tag and the GitHub Action builds on all three platforms and attaches the executables.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ## About the data
 
 Data comes from [`monosans/proxy-list`](https://github.com/monosans/proxy-list) and is fetched directly from that repo. The latency numbers are the `timeout` field already measured by the source project — your browser never tests the proxies itself.

@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" id="themeColor" content="#F2F3F5">
+<title>Proxy List Inspector</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230C0E12'/%3E%3Ccircle cx='8' cy='8' r='3.2' fill='%231B3BFF'/%3E%3C/svg%3E">
+<script>
+  (function () {
+    var t = localStorage.getItem("theme");
+    if (t !== "dark" && t !== "light")
+      t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F2F3F5;
+    --surface: #FFFFFF;
+    --ink: #0C0E12;
+    --line: #E3E5E9;
+    --line-strong: #C9CDD4;
+    --accent: #1B3BFF;
+    --accent-soft: #EEF1FF;
+    --muted: #71767F;
+    --danger: #E5493A;
+    --sans: "Space Grotesk", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #0D0F13;
+    --surface: #14171C;
+    --ink: #E9EBEF;
+    --line: #24282F;
+    --line-strong: #363B44;
+    --accent: #6480FF;
+    --accent-soft: #171E3A;
+    --muted: #8E949E;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  button, input, select { font: inherit; color: inherit; }
+
+  button { cursor: pointer; background: none; border: none; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 56px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+  }
+
+  .brand .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    align-self: center;
+    flex-shrink: 0;
+  }
+
+  .brand .dot.loading { animation: pulse 1s ease-in-out infinite; }
+  .brand .dot.error { background: var(--danger); }
+  .brand .dot.off { background: var(--line-strong); }
+
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .brand small {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    font-size: 13px;
+    font-weight: 500;
+    transition: border-color .15s, background .15s;
+  }
+
+  .btn:hover { border-color: var(--ink); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn:disabled:hover { border-color: var(--line-strong); }
+
+  .btn.primary {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+  .btn.primary:hover { opacity: .88; }
+
+  .btn svg { width: 14px; height: 14px; }
+  .btn.spinning svg { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .btn.icon-btn { width: 34px; padding: 0; justify-content: center; }
+  .btn.icon-btn .icon-sun { display: none; }
+  :root[data-theme="dark"] .btn.icon-btn .icon-sun { display: block; }
+  :root[data-theme="dark"] .btn.icon-btn .icon-moon { display: none; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding: 48px 0 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .hero-count {
+    font-size: clamp(56px, 9vw, 104px);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 240px;
+    flex: 1;
+    max-width: 340px;
+  }
+
+  .dist-row {
+    display: grid;
+    grid-template-columns: 56px 1fr 44px;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .dist-row .name { font-family: var(--mono); color: var(--muted); }
+
+  .dist-row .bar {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .dist-row .bar i {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0;
+    transition: width .7s cubic-bezier(.2,.7,.3,1);
+  }
+
+  .dist-row .val {
+    font-family: var(--mono);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 28px;
+    font-size: 13px;
+    color: var(--muted);
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .hero-meta b {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    font-family: var(--mono);
+    font-size: 15px;
+  }
+
+  /* ---------- controls ---------- */
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 0;
+  }
+
+  .controls-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .search {
+    position: relative;
+    flex: 1 1 260px;
+    min-width: 200px;
+  }
+
+  .search svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .search input {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px 0 36px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    font-size: 14px;
+  }
+
+  .search input::placeholder { color: var(--muted); }
+  .search input:focus { border-color: var(--accent); outline: none; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .chip {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    transition: all .12s;
+  }
+
+  .chip:hover { border-color: var(--ink); color: var(--ink); }
+
+  .chip.on {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  select {
+    height: 34px;
+    padding: 0 30px 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2371767F' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+    font-size: 13px;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  select:hover { border-color: var(--ink); }
+
+  .latency {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .latency input[type="range"] {
+    width: 110px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .latency .ms {
+    font-family: var(--mono);
+    color: var(--ink);
+    min-width: 52px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0 10px;
+    font-size: 13px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+
+  .result-line .count { color: var(--ink); font-family: var(--mono); }
+
+  .clear-btn {
+    font-size: 13px;
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .clear-btn:hover { color: var(--ink); }
+
+  /* ---------- table ---------- */
+  .table-shell {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: auto;
+    max-height: calc(100vh - 120px);
+    margin-bottom: 24px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--surface);
+    border-bottom: 1px solid var(--ink);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--muted);
+    user-select: none;
+    cursor: pointer;
+  }
+
+  thead th:hover { color: var(--ink); }
+  thead th.sorted { color: var(--ink); }
+
+  thead th .arrow {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--accent-soft); }
+
+  td.country, td.city, td.asn { font-family: var(--sans); }
+
+  td.asn {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--muted);
+  }
+
+  .proto {
+    display: inline-block;
+    padding: 2px 7px;
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    background: var(--paper);
+  }
+
+  .proto.socks5 { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  .flag { margin-right: 6px; }
+
+  td.actions { text-align: right; width: 1%; }
+
+  .copy-row {
+    opacity: 0;
+    height: 26px;
+    padding: 0 9px;
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: var(--sans);
+    color: var(--muted);
+    transition: opacity .12s;
+  }
+
+  tr:hover .copy-row, .copy-row:focus-visible { opacity: 1; }
+  .copy-row:hover { border-color: var(--ink); color: var(--ink); }
+
+  .empty, .error-box {
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .error-box b { color: var(--ink); display: block; margin-bottom: 8px; font-weight: 500; font-size: 16px; }
+
+  .error-box .btn { margin-top: 16px; }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 20px 0 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .footer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ---------- toast ---------- */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    z-index: 100;
+    transform: translateY(16px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all .2s ease;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 860px) {
+    .hide-md { display: none; }
+    .hero { padding: 32px 0 28px; }
+    .dist { max-width: none; }
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 0 14px; }
+    .hide-sm { display: none; }
+    .header-actions .updated { display: none; }
+    .hero-meta { gap: 18px; flex-wrap: wrap; }
+    .latency input[type="range"] { width: 80px; }
+    .table-shell { max-height: calc(100vh - 80px); border-radius: 4px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="brand">
+      <span class="dot loading" id="statusDot" aria-hidden="true"></span>
+      Proxy Inspector
+      <small id="statusText">fetching…</small>
+    </div>
+    <div class="header-actions">
+      <span class="updated" id="updatedLabel"></span>
+      <button class="btn icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+        <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3"/></svg>
+      </button>
+      <button class="btn" id="refreshBtn" title="Reload from source">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <div class="hero-count" id="heroCount">0</div>
+      <div class="hero-meta">
+        <div><b id="metaCountries">–</b>countries</div>
+        <div><b id="metaAsns">–</b>networks</div>
+        <div><b id="metaMedian">–</b>median latency</div>
+        <div><b id="metaFastest">–</b>fastest</div>
+      </div>
+    </div>
+    <div class="dist" id="dist" aria-label="Protocol distribution"></div>
+  </section>
+</main>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <div class="search">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+      <input type="search" id="searchInput" placeholder="Search host, port, country, city, network…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="chips" id="protoChips" role="group" aria-label="Protocol filter"></div>
+    <select id="countrySelect" aria-label="Country filter"><option value="">All countries</option></select>
+    <div class="latency">
+      <label for="latencyRange">up to</label>
+      <input type="range" id="latencyRange" min="0" max="100" value="100" step="1">
+      <span class="ms" id="latencyLabel">any</span>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="result-line">
+    <span><span class="count" id="resultCount">0</span> results <span id="filterNote"></span></span>
+    <button class="clear-btn" id="clearBtn" hidden>Clear filters</button>
+  </div>
+
+  <div class="table-shell" id="tableShell">
+    <div class="empty" id="stateMsg">Loading proxy list…</div>
+    <table id="proxyTable" hidden>
+      <thead>
+        <tr>
+          <th data-key="protocol">Protocol</th>
+          <th data-key="host">Host</th>
+          <th data-key="port">Port</th>
+          <th data-key="country">Country</th>
+          <th data-key="city" class="hide-sm">City</th>
+          <th data-key="asn" class="hide-md">Network</th>
+          <th data-key="timeout" class="sorted">Latency<span class="arrow">↓</span></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="error-box" id="errorBox" hidden>
+      <b>Couldn't load the proxy list</b>
+      <span id="errorMsg"></span>
+      <br>
+      <button class="btn" id="retryBtn">Try again</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;width:100%;padding:0;">
+    <span>Data from <a href="https://github.com/monosans/proxy-list" target="_blank" rel="noopener">monosans/proxy-list</a> · updates continuously</span>
+    <div class="footer-actions">
+      <button class="btn" id="copyAllBtn">Copy filtered</button>
+      <button class="btn primary" id="csvBtn">Download CSV</button>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  const URL_SRC = "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies.json";
+  const FALLBACK = "fallback.json";
+  const PAGE = 200;
+
+  const $ = id => document.getElementById(id);
+  const el = {
+    statusDot: $("statusDot"), statusText: $("statusText"), updatedLabel: $("updatedLabel"),
+    refreshBtn: $("refreshBtn"), retryBtn: $("retryBtn"), themeBtn: $("themeBtn"), themeColor: $("themeColor"),
+    heroCount: $("heroCount"),
+    metaCountries: $("metaCountries"), metaAsns: $("metaAsns"),
+    metaMedian: $("metaMedian"), metaFastest: $("metaFastest"), dist: $("dist"),
+    searchInput: $("searchInput"), protoChips: $("protoChips"),
+    countrySelect: $("countrySelect"), latencyRange: $("latencyRange"), latencyLabel: $("latencyLabel"),
+    resultCount: $("resultCount"), filterNote: $("filterNote"), clearBtn: $("clearBtn"),
+    tableShell: $("tableShell"), proxyTable: $("proxyTable"), tbody: $("tbody"),
+    stateMsg: $("stateMsg"), errorBox: $("errorBox"), errorMsg: $("errorMsg"),
+    copyAllBtn: $("copyAllBtn"), csvBtn: $("csvBtn"), toast: $("toast")
+  };
+
+  const state = {
+    all: [],
+    filtered: [],
+    protos: new Set(),
+    country: "",
+    query: "",
+    maxTimeout: Infinity,
+    sortKey: "timeout",
+    sortDir: 1,
+    shown: PAGE,
+    loaded: false
+  };
+
+  const fmtNum = n => n.toLocaleString("en-US");
+  const protoOrder = { http: 0, https: 1, socks4: 2, socks5: 3 };
+
+  /* ---------- data ---------- */
+
+  async function load() {
+    setStatus("loading", "fetching…");
+    el.refreshBtn.disabled = true;
+    el.refreshBtn.classList.add("spinning");
+    el.errorBox.hidden = true;
+
+    let data = null, stale = false, lastErr = "";
+
+    try {
+      const res = await fetch(URL_SRC, { cache: "no-cache" });
+      if (!res.ok) throw new Error("source returned " + res.status);
+      data = await res.json();
+    } catch (e) {
+      lastErr = e.message || String(e);
+      try {
+        const res = await fetch(FALLBACK, { cache: "no-cache" });
+        if (res.ok) { data = await res.json(); stale = true; }
+      } catch (_) { /* keep error */ }
+    }
+
+    el.refreshBtn.disabled = false;
+    el.refreshBtn.classList.remove("spinning");
+
+    if (!Array.isArray(data) || !data.length) {
+      setStatus("error", "offline");
+      el.stateMsg.hidden = true;
+      el.proxyTable.hidden = true;
+      el.errorBox.hidden = false;
+      el.errorMsg.textContent = lastErr || "Empty response from source.";
+      el.heroCount.textContent = "0";
+      return;
+    }
+
+    state.all = data.map(normalize);
+    state.loaded = true;
+
+    setStatus(stale ? "stale" : "ok", stale ? "cached copy" : "live");
+    el.updatedLabel.textContent = "updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (stale) el.updatedLabel.textContent = "offline · cached copy";
+
+    buildControls();
+    renderHero();
+    applyFilters(true);
+  }
+
+  function normalize(p) {
+    const country = p.geolocation?.country?.names?.en || "Unknown";
+    return {
+      protocol: p.protocol || "http",
+      host: p.host || "",
+      port: p.port || 0,
+      timeout: typeof p.timeout === "number" ? p.timeout : 0,
+      country,
+      countryCode: p.geolocation?.country?.iso_code || "",
+      city: p.geolocation?.city?.names?.en || "",
+      asn: p.asn?.autonomous_system_organization || "",
+      exitIp: p.exit_ip || ""
+    };
+  }
+
+  function setStatus(kind, text) {
+    el.statusDot.className = "dot " + (kind === "loading" ? "loading" : kind === "error" ? "error" : kind === "stale" ? "off" : "");
+    el.statusText.textContent = text;
+  }
+
+  /* ---------- hero ---------- */
+
+  function renderHero() {
+    const all = state.all;
+    const countries = new Set(all.map(p => p.country)).size;
+    const asns = new Set(all.map(p => p.asn).filter(Boolean)).size;
+    const timeouts = all.map(p => p.timeout).filter(t => t > 0).sort((a, b) => a - b);
+    const median = timeouts.length ? timeouts[Math.floor(timeouts.length / 2)] : 0;
+    const fastest = timeouts.length ? timeouts[0] : 0;
+
+    el.metaCountries.textContent = countries;
+    el.metaAsns.textContent = asns;
+    el.metaMedian.textContent = median ? Math.round(median * 1000) + " ms" : "–";
+    el.metaFastest.textContent = fastest ? Math.round(fastest * 1000) + " ms" : "–";
+    countUp(el.heroCount, all.length);
+
+    const counts = {};
+    all.forEach(p => counts[p.protocol] = (counts[p.protocol] || 0) + 1);
+    const protos = Object.keys(counts).sort((a, b) => (protoOrder[a] ?? 9) - (protoOrder[b] ?? 9));
+    el.dist.innerHTML = protos.map(k =>
+      '<div class="dist-row"><span class="name">' + k + '</span><span class="bar"><i data-w="' +
+      Math.round((counts[k] / all.length) * 100) + '"></i></span><span class="val">' + fmtNum(counts[k]) + "</span></div>"
+    ).join("");
+    requestAnimationFrame(() =>
+      el.dist.querySelectorAll(".bar i").forEach(i => i.style.width = i.dataset.w + "%")
+    );
+  }
+
+  function countUp(node, target) {
+    node.textContent = fmtNum(target);
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    const t0 = performance.now(), dur = 700;
+    function tick(t) {
+      const k = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      node.textContent = fmtNum(Math.round(target * eased));
+      if (k < 1) requestAnimationFrame(tick);
+      else node.textContent = fmtNum(target);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------- controls ---------- */
+
+  function buildControls() {
+    const protos = [...new Set(state.all.map(p => p.protocol))]
+      .sort((a, b) => (protoOrder[a] ?? 9) - (protoOrder[b] ?? 9));
+    el.protoChips.innerHTML = protos.map(p =>
+      '<button class="chip" data-proto="' + p + '" aria-pressed="false">' + p + "</button>"
+    ).join("");
+    el.protoChips.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const p = btn.dataset.proto;
+        if (state.protos.has(p)) state.protos.delete(p); else state.protos.add(p);
+        btn.classList.toggle("on", state.protos.has(p));
+        btn.setAttribute("aria-pressed", state.protos.has(p));
+        state.shown = PAGE;
+        applyFilters();
+      });
+    });
+
+    const countries = [...new Set(state.all.map(p => p.country))]
+      .sort((a, b) => a.localeCompare(b));
+    el.countrySelect.innerHTML = '<option value="">All countries</option>' +
+      countries.map(c => {
+        const n = state.all.filter(p => p.country === c).length;
+        return '<option value="' + esc(c) + '">' + esc(c) + " (" + n + ")</option>";
+      }).join("");
+    el.countrySelect.onchange = () => {
+      state.country = el.countrySelect.value;
+      state.shown = PAGE;
+      applyFilters();
+    };
+
+    const maxT = Math.max(...state.all.map(p => p.timeout), 1);
+    el.latencyRange.max = Math.ceil(maxT * 1000);
+    el.latencyRange.value = Math.ceil(maxT * 1000);
+    state.maxTimeout = Infinity;
+    el.latencyLabel.textContent = "any";
+    el.latencyRange.oninput = () => {
+      const ms = +el.latencyRange.value;
+      const cap = Math.ceil(maxT * 1000);
+      if (ms >= cap) { state.maxTimeout = Infinity; el.latencyLabel.textContent = "any"; }
+      else { state.maxTimeout = ms / 1000; el.latencyLabel.textContent = ms + " ms"; }
+      state.shown = PAGE;
+      applyFilters();
+    };
+  }
+
+  let searchTimer;
+  el.searchInput.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.query = el.searchInput.value.trim().toLowerCase();
+      state.shown = PAGE;
+      applyFilters();
+    }, 120);
+  });
+
+  el.clearBtn.addEventListener("click", () => {
+    state.query = ""; state.protos.clear(); state.country = ""; state.maxTimeout = Infinity;
+    el.searchInput.value = ""; el.countrySelect.value = "";
+    const cap = el.latencyRange.max;
+    el.latencyRange.value = cap; el.latencyLabel.textContent = "any";
+    el.protoChips.querySelectorAll(".chip").forEach(b => {
+      b.classList.remove("on"); b.setAttribute("aria-pressed", "false");
+    });
+    state.shown = PAGE;
+    applyFilters();
+  });
+
+  document.querySelectorAll("thead th[data-key]").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (state.sortKey === key) state.sortDir *= -1;
+      else { state.sortKey = key; state.sortDir = 1; }
+      applyFilters();
+    });
+  });
+
+  /* ---------- filter + render ---------- */
+
+  function applyFilters(resetHero) {
+    const q = state.query;
+    let out = state.all.filter(p => {
+      if (state.protos.size && !state.protos.has(p.protocol)) return false;
+      if (state.country && p.country !== state.country) return false;
+      if (p.timeout > state.maxTimeout) return false;
+      if (q) {
+        const hay = p.host + " " + p.port + " " + p.country + " " + p.countryCode + " " +
+          p.city + " " + p.asn + " " + p.protocol + " " + p.exitIp;
+        if (!hay.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+
+    const key = state.sortKey, dir = state.sortDir;
+    out.sort((a, b) => {
+      let va = a[key], vb = b[key];
+      if (key === "protocol") { va = protoOrder[va] ?? 9; vb = protoOrder[vb] ?? 9; }
+      if (typeof va === "string") return va.localeCompare(vb) * dir;
+      return (va - vb) * dir;
+    });
+
+    state.filtered = out;
+    renderTable();
+    renderResultLine();
+    updateSortHeaders();
+    if (resetHero) { /* hero already rendered */ }
+  }
+
+  function updateSortHeaders() {
+    document.querySelectorAll("thead th[data-key]").forEach(th => {
+      const on = th.dataset.key === state.sortKey;
+      th.classList.toggle("sorted", on);
+      const old = th.querySelector(".arrow");
+      if (old) old.remove();
+      if (on) {
+        const s = document.createElement("span");
+        s.className = "arrow";
+        s.textContent = state.sortDir === 1 ? "↑" : "↓";
+        th.appendChild(s);
+      }
+    });
+  }
+
+  function renderResultLine() {
+    const n = state.filtered.length, total = state.all.length;
+    el.resultCount.textContent = fmtNum(n);
+    const active = state.query || state.protos.size || state.country || state.maxTimeout !== Infinity;
+    el.filterNote.textContent = n === total ? "of " + fmtNum(total) : "of " + fmtNum(total) + " total";
+    el.clearBtn.hidden = !active;
+  }
+
+  function renderTable() {
+    const rows = state.filtered.slice(0, state.shown);
+    el.stateMsg.hidden = true;
+    el.errorBox.hidden = true;
+
+    if (!state.filtered.length) {
+      el.proxyTable.hidden = true;
+      el.stateMsg.hidden = false;
+      el.stateMsg.textContent = "No proxies match these filters.";
+      return;
+    }
+
+    el.proxyTable.hidden = false;
+    const frag = document.createDocumentFragment();
+    for (const p of rows) {
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td><span class="proto ' + esc(p.protocol) + '">' + esc(p.protocol) + "</span></td>" +
+        "<td>" + esc(p.host) + "</td>" +
+        "<td>" + p.port + "</td>" +
+        '<td class="country">' + flagEmoji(p.countryCode) + esc(p.country) + "</td>" +
+        '<td class="city hide-sm">' + esc(p.city) + "</td>" +
+        '<td class="asn hide-md" title="' + esc(p.asn) + '">' + esc(p.asn) + "</td>" +
+        "<td>" + Math.round(p.timeout * 1000) + " ms</td>" +
+        '<td class="actions"><button class="copy-row" data-proxy="' + esc(p.protocol + "://" + p.host + ":" + p.port) + '">copy</button></td>';
+      frag.appendChild(tr);
+    }
+    el.tbody.replaceChildren(frag);
+
+    let more = el.tbody.parentElement.querySelector(".show-more");
+    if (state.filtered.length > state.shown) {
+      if (!more) {
+        more = document.createElement("div");
+        more.className = "show-more";
+        more.style.cssText = "padding:14px;text-align:center;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface);";
+        const b = document.createElement("button");
+        b.className = "btn";
+        b.textContent = "";
+        more.appendChild(b);
+        el.tableShell.appendChild(more);
+      }
+      const b = more.querySelector("button");
+      b.textContent = "Show " + Math.min(PAGE, state.filtered.length - state.shown) + " more (" +
+        fmtNum(state.filtered.length - state.shown) + " remaining)";
+      b.onclick = () => { state.shown += PAGE; renderTable(); };
+      more.hidden = false;
+    } else if (more) {
+      more.remove();
+    }
+  }
+
+  el.tbody.addEventListener("click", e => {
+    const btn = e.target.closest(".copy-row");
+    if (!btn) return;
+    copyText(btn.dataset.proxy).then(() => toast("Copied " + btn.dataset.proxy));
+  });
+
+  /* ---------- export ---------- */
+
+  el.copyAllBtn.addEventListener("click", async () => {
+    if (!state.filtered.length) return toast("Nothing to copy");
+    const text = state.filtered.map(p => p.host + ":" + p.port).join("\n");
+    await copyText(text);
+    toast("Copied " + fmtNum(state.filtered.length) + " addresses");
+  });
+
+  el.csvBtn.addEventListener("click", () => {
+    if (!state.filtered.length) return toast("Nothing to export");
+    const head = ["protocol", "host", "port", "timeout_ms", "country", "city", "asn", "exit_ip"];
+    const lines = [head.join(",")].concat(state.filtered.map(p =>
+      [p.protocol, p.host, p.port, Math.round(p.timeout * 1000), p.country, p.city, p.asn, p.exitIp]
+        .map(v => '"' + String(v).replace(/"/g, '""') + '"').join(",")
+    ));
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "proxies-filtered.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Downloaded " + fmtNum(state.filtered.length) + " rows");
+  });
+
+  el.refreshBtn.addEventListener("click", load);
+  el.retryBtn.addEventListener("click", load);
+
+  /* ---------- theme ---------- */
+
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem("theme", t);
+    el.themeColor.content = t === "dark" ? "#0D0F13" : "#F2F3F5";
+  }
+
+  applyTheme(document.documentElement.dataset.theme || "light");
+
+  el.themeBtn.addEventListener("click", () => {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
+
+  /* ---------- utils ---------- */
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function flagEmoji(iso) {
+    if (!iso || iso.length !== 2) return "";
+    return [...iso.toUpperCase()].map(c =>
+      String.fromCodePoint(127397 + c.charCodeAt(0))).join("") + " ";
+  }
+
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = t; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); ta.remove();
+    }
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove("show"), 2200);
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
